@@ -1,6 +1,7 @@
 ﻿#pragma execution_character_set("utf-8")
 #include "exceloperator.h"
 #include <objbase.h>
+#include <QTime>
 ExcelOperator::ExcelOperator(QObject *parent) : QObject(parent)
   , m_pExcel(NULL)
   , m_pWorksheets(NULL)
@@ -20,6 +21,8 @@ ExcelOperator::~ExcelOperator()
 //}
 bool ExcelOperator::open(QString path,bool isNew)
 {
+	QTime t;
+	t.start();
     m_strPath = path;
     QAxObject *pWorkbooks = NULL;
     if (m_pExcel) {
@@ -35,6 +38,9 @@ bool ExcelOperator::open(QString path,bool isNew)
         m_pExcel->dynamicCall("SetVisible(bool)", false); //true 表示操作文件时可见，false表示为不可见
         m_pExcel->setProperty("DisplayAlerts", false);
         pWorkbooks = m_pExcel->querySubObject("WorkBooks");
+		long long ms = t.elapsed();
+		qDebug() << "pWorkbooks 毫秒：" << ms << ",秒" << (double)ms / 1000; 
+		t.restart();
         if (isNew) {
             pWorkbooks->dynamicCall("Add");
         }
@@ -45,6 +51,8 @@ bool ExcelOperator::open(QString path,bool isNew)
         qDebug()<<"excel path: "<<m_strPath;
         // 获取打开的excel文件中所有的工作sheet
         m_pWorksheets = m_pWorkbook->querySubObject("WorkSheets");
+		ms = t.elapsed();
+		qDebug() << "m_pWorksheets 毫秒：" << ms << ",秒" << (double)ms / 1000;
 //        QAxObject *work_sheets = getSheet(1);
 //        QAxObject *used_range = work_sheets->querySubObject("UsedRange");
 //        QAxObject *rows = used_range->querySubObject("Rows");
@@ -71,12 +79,19 @@ bool ExcelOperator::save(){
     qDebug()<<"excel close...";
     if (m_pExcel)
     {
+		QTime t;
+		t.start();
         qDebug()<<"closing...";
         m_pWorkbook->dynamicCall("SaveAs(const QString&)", QDir::toNativeSeparators(m_strPath));
         m_pWorkbook->dynamicCall("Close()");
+		long long ms = t.elapsed();
+		qDebug() << "m_pWorkbook Close 毫秒：" << ms << ",秒" << (double)ms / 1000;
+		t.restart();
         m_pExcel->dynamicCall("Quit()");
         delete m_pExcel;
         m_pExcel = NULL;
+		ms = t.elapsed();
+		qDebug() << "m_pExcel Quit 毫秒：" << ms << ",秒" << (double)ms / 1000;
     }
     return true;
 }
